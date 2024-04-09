@@ -1,2 +1,53 @@
-create database [bookstore]
+USE [bookstore]
 go
+
+CREATE TABLE [Countries] (
+    Id INT PRIMARY KEY IDENTITY,
+    Name NVARCHAR(MAX) NOT NULL,
+);
+
+CREATE TABLE [Themes] (
+    Id INT PRIMARY KEY IDENTITY,
+    Name NVARCHAR(MAX) NOT NULL,
+);
+
+CREATE TABLE [Authors] (
+    Id INT PRIMARY KEY IDENTITY,
+    Name NVARCHAR(MAX) NOT NULL,
+    Surname NVARCHAR(MAX) NOT NULL,
+    CountryId INT NOT NULL,
+    FOREIGN KEY (CountryId) REFERENCES Countries(Id)
+);
+
+CREATE TABLE [Shops] (
+    Id INT PRIMARY KEY IDENTITY,
+    Name NVARCHAR(MAX) NOT NULL,
+	CountryId INT NOT NULL,
+);
+
+CREATE TABLE Books (
+    Id INT PRIMARY KEY IDENTITY,
+    Name NVARCHAR(MAX) NOT NULL,
+    Pages INT NOT NULL CHECK (Pages > 0),
+    Price MONEY NOT NULL CHECK (Price >= 0),
+    PublishDate DATE NOT NULL CHECK (PublishDate <= GETDATE()),
+    AuthorId INT NOT NULL,
+    ThemeId INT NOT NULL,
+    FOREIGN KEY (AuthorId) REFERENCES Authors(Id),
+    FOREIGN KEY (ThemeId) REFERENCES Themes(Id)
+);
+
+
+CREATE TABLE Sales (
+    Id INT PRIMARY KEY IDENTITY,
+    Price MONEY NOT NULL CHECK (Price >= 0),
+    Quantity INT NOT NULL CHECK (Quantity > 0),
+    SaleDate DATE NOT NULL DEFAULT GETDATE() CHECK (SaleDate <= GETDATE()),
+    BookId INT NOT NULL,
+    ShopId INT NOT NULL,
+    FOREIGN KEY (BookId) REFERENCES Books(Id),
+    FOREIGN KEY (ShopId) REFERENCES Shops(Id)
+);
+
+
+
