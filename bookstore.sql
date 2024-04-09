@@ -1,2 +1,3 @@
-create database [bookstore]
+use [bookstore]
 go
+
