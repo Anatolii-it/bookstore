@@ -7,12 +7,7 @@ INSERT INTO Countries (Name) VALUES
 ('UK'),
 ('France'),
 ('Germany'),
-('Spain'),
-('Italy'),
-('Canada'),
-('Australia'),
-('Japan'),
-('China');
+('Spain');
 
 
 INSERT INTO Themes (Name) VALUES
@@ -36,9 +31,10 @@ INSERT INTO Authors (Name, Surname, CountryId) VALUES
 ('Jane', 'Austen', 2),
 ('Ernest', 'Hemingway', 1),
 ('Gabriel', 'García Márquez', 5),
-('Haruki', 'Murakami', 9),
-('Margaret', 'Atwood', 6),
-('George', 'Orwell', 1);
+('Haruki', 'Murakami', 1),
+('Margaret', 'Atwood', 2),
+('George', 'Orwell', 3);
+
 
 
 INSERT INTO Shops (Name, CountryId) VALUES
@@ -46,12 +42,7 @@ INSERT INTO Shops (Name, CountryId) VALUES
 ('Bookstore2', 2),
 ('Bookstore3', 3),
 ('Bookstore4', 4),
-('Bookstore5', 5),
-('Bookstore6', 6),
-('Bookstore7', 7),
-('Bookstore8', 8),
-('Bookstore9', 9),
-('Bookstore10', 10);
+('Bookstore5', 5);
 
 
 INSERT INTO Books (Name, Pages, Price, PublishDate, AuthorId, ThemeId) VALUES
@@ -73,8 +64,8 @@ INSERT INTO Sales (Price, Quantity, SaleDate, BookId, ShopId) VALUES
 (19.99, 15, '2024-03-22', 3, 3),
 (25.99, 8, '2024-03-23', 4, 4),
 (10.99, 12, '2024-03-24', 5, 5),
-(9.99, 15, '2024-03-25', 6, 6),
-(18.50, 18, '2024-03-26', 7, 7),
-(14.99, 22, '2024-03-27', 8, 8),
-(11.99, 25, '2024-03-28', 9, 9),
-(8.99, 30, '2024-03-29', 10, 10);
+(9.99, 15, '2024-03-25', 6, 1),
+(18.50, 18, '2024-03-26', 7, 2),
+(14.99, 22, '2024-03-27', 8, 3),
+(11.99, 25, '2024-03-28', 9, 4),
+(8.99, 30, '2024-03-29', 10, 5);
