@@ -25,6 +25,17 @@ CREATE TABLE [Shops] (
 	CountryId INT NOT NULL,
 );
 
+CREATE TABLE Employees (
+    EmployeeId INT PRIMARY KEY IDENTITY,
+    Name NVARCHAR(100) NOT NULL,
+	Surname NVARCHAR(100) NOT NULL,
+    Position NVARCHAR(50) NOT NULL,
+    HireDate DATE NOT NULL,
+    Salary MONEY NOT NULL,
+	ShopId INT NOT NULL,
+	FOREIGN KEY (ShopId) REFERENCES Shops(Id)
+);
+
 CREATE TABLE Books (
     Id INT PRIMARY KEY IDENTITY,
     Name NVARCHAR(MAX) NOT NULL,
@@ -45,8 +56,10 @@ CREATE TABLE Sales (
     SaleDate DATE NOT NULL DEFAULT GETDATE() CHECK (SaleDate <= GETDATE()),
     BookId INT NOT NULL,
     ShopId INT NOT NULL,
+	EmployeeId INT NOT NULL,
     FOREIGN KEY (BookId) REFERENCES Books(Id),
-    FOREIGN KEY (ShopId) REFERENCES Shops(Id)
+    FOREIGN KEY (ShopId) REFERENCES Shops(Id),
+	FOREIGN KEY (EmployeeId) REFERENCES Employees(EmployeeId)
 );
 
 
