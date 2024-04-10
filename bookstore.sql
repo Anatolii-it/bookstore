@@ -66,7 +66,7 @@ INSERT INTO Books (Name, Pages, Price, PublishDate, AuthorId, ThemeId) VALUES
 ('One Hundred Years of Solitude', 500, 18.50, '2023-12-05', 7, 5),
 ('Norwegian Wood', 400, 14.99, '2023-10-15', 8, 3),
 ('The Handmaid''s Tale', 350, 11.99, '2023-06-30', 9, 10),
-('Animal Farm', 200, 8.99, '2023-04-15', 10, 10);
+('Microsoft History', 200, 8.99, '2023-04-15', 10, 10);
 
 
 INSERT INTO Sales (Price, Quantity, SaleDate, BookId, ShopId, EmployeeId) VALUES
