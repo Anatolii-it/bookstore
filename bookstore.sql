@@ -19,7 +19,7 @@ INSERT INTO Themes (Name) VALUES
 ('Поезія'),
 ('Драма'),
 ('Комедія'),
-('Трилер'),
+('Програмування'),
 ('Фантастика');
 
 
@@ -38,11 +38,11 @@ INSERT INTO Authors (Name, Surname, CountryId) VALUES
 
 
 INSERT INTO Shops (Name, CountryId) VALUES
-('Bookstore1', 1),
-('Bookstore2', 2),
-('Bookstore3', 3),
-('Bookstore4', 4),
-('Bookstore5', 5);
+('Barnes & Noble', 1),
+('Bookovka', 2),
+('Librairie Galignani', 3),
+('Gelikon DE', 4),
+('Calders', 5);
 
 
 INSERT INTO Books (Name, Pages, Price, PublishDate, AuthorId, ThemeId) VALUES
