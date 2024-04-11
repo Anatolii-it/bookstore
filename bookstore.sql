@@ -287,49 +287,206 @@ BEGIN
 END;
 
 
-INSERT INTO Sales(Price, Quantity, SaleDate, BookId, ShopId, CustomerId, EmployeeId) VALUES
-(10.99, 29, '2024-03-20', 1, 1, 1, 1),
-(3.99, 29, '2024-03-29', 10, 5, 1, 10);
-
 INSERT INTO Sales (Price, Quantity, SaleDate, BookId, ShopId, CustomerId, EmployeeId) VALUES
-(15.99, 10, '2024-03-20', 1, 1, 1, 1),
-(12.50, 20, '2024-03-21', 2, 2, 2, 2),
-(19.99, 15, '2024-03-22', 3, 3, 3, 3),
-(25.99, 8, '2024-03-23', 4, 4, 4, 4),
-(10.99, 12, '2024-03-24', 5, 5, 5, 5),
-(9.99, 15, '2024-03-25', 6, 1, 6, 1),
-(18.50, 18, '2024-03-26', 7, 2, 7, 3),
-(14.99, 22, '2024-03-27', 8, 3, 8, 2),
-(11.99, 25, '2024-03-28', 9, 4, 9, 2),
-(8.99, 30, '2024-03-29', 10, 5, 10, 5);
+(15.99, 70, '2024-03-20', 1, 1, 1, 1),
+(12.50, 80, '2024-03-21', 2, 2, 2, 2),
+(19.99, 85, '2024-03-22', 3, 3, 3, 3),
+(25.99, 88, '2024-03-23', 4, 4, 4, 4),
+(10.99, 82, '2024-03-24', 5, 5, 5, 5),
+(9.99, 80, '2024-03-25', 6, 1, 6, 1),
+(18.50, 80, '2024-03-26', 7, 2, 7, 3),
+(14.99, 82, '2024-03-27', 8, 3, 8, 2),
+(11.99, 85, '2024-03-28', 9, 4, 9, 2),
+(8.99, 80, '2024-03-29', 10, 5, 10, 5);
 
 -- Визначити дохід по кожному магазину
 CREATE PROCEDURE CalculateIncomeByShop
 AS
 BEGIN
-    -- Тимчасова таблиця для об'єднання результатів
     CREATE TABLE #IncomeByShop (
-        ShopId INT,
+        ShopName NVARCHAR(MAX),
         TotalIncome MONEY
     );
 
-    -- Розрахунок доходу за продажі для кожного магазину
-    INSERT INTO #IncomeByShop (ShopId, TotalIncome)
-    SELECT s.ShopId, SUM(s.Price * s.Quantity) AS TotalIncome
+    INSERT INTO #IncomeByShop (ShopName, TotalIncome)
+    SELECT sh.Name, SUM(s.Price * s.Quantity) AS TotalIncome
     FROM Sales AS s
-    GROUP BY s.ShopId;
+    INNER JOIN Shops AS sh ON s.ShopId = sh.Id
+    GROUP BY sh.Name;
 
-    -- Додавання доходу за замовлення для кожного магазину
     UPDATE #IncomeByShop
-    SET TotalIncome = TotalIncome + (
+    SET TotalIncome = TotalIncome - (
         SELECT SUM(o.PPrice * o.Quantity)
         FROM Orders AS o
-        WHERE o.ShopId = #IncomeByShop.ShopId
+        INNER JOIN Shops AS sh ON o.ShopId = sh.Id
+        WHERE sh.Name = #IncomeByShop.ShopName
     );
 
-    -- Показати результат
     SELECT * FROM #IncomeByShop;
-
-    -- Видалення тимчасової таблиці
     DROP TABLE #IncomeByShop;
 END;
+
+-- перевірка 
+EXEC CalculateIncomeByShop;
+
+ -- обчислення загального доходу для кожного продавця
+CREATE PROCEDURE CalculateIncomeByEmployee
+AS
+BEGIN
+    SELECT 
+        ISNULL(s.EmployeeId, o.EmployeeId) AS EmployeeId,
+        ISNULL(SUM(s.Price * s.Quantity), 0) AS TotalIncome
+    FROM 
+        Sales s
+    FULL JOIN 
+        Orders o ON s.EmployeeId = o.EmployeeId
+    GROUP BY 
+        ISNULL(s.EmployeeId, o.EmployeeId);
+END;
+
+
+-- перевірка
+EXEC CalculateIncomeByEmployee
+
+
+CREATE PROCEDURE BestSellingBookAndShops
+AS
+BEGIN
+    SELECT TOP 3
+        B.Name AS BestSellingBook,
+        S.Name AS ShopName,
+        C.Name AS CountryName
+    FROM
+        Sales SA
+    INNER JOIN
+        Books B ON SA.BookId = B.Id
+    INNER JOIN
+        Shops S ON SA.ShopId = S.Id
+    INNER JOIN
+        Countries C ON S.CountryId = C.Id
+    GROUP BY
+        B.Name, S.Name, C.Name
+    ORDER BY
+        COUNT(*) DESC;
+END;
+
+-- TOP 3 книг
+EXEC BestSellingBookAndShops;
+
+
+CREATE PROCEDURE SortByCountry
+AS
+BEGIN
+SELECT 
+    Books.Name AS Book,
+    Authors.Name AS Author,
+    Sales.Quantity AS Quantity,
+    Shops.Name AS Shops,
+    Countries.Name AS [Location],
+    Sales.SaleDate AS Date_Sales
+FROM 
+    Sales
+JOIN 
+    Books ON Sales.BookId = Books.Id
+JOIN 
+    Authors ON Books.AuthorId = Authors.Id
+JOIN 
+    Shops ON Sales.ShopId = Shops.Id
+JOIN 
+    Countries ON Shops.CountryId = Countries.Id
+	ORDER BY [Location];
+	end;
+
+-- все покупки посортовані по країнах
+	exec SortByCountry
+
+CREATE TRIGGER DuplicateBooks
+ON Books
+INSTEAD OF INSERT
+AS
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM inserted AS i
+        WHERE EXISTS (
+            SELECT 1
+            FROM Books AS b
+            WHERE b.Name = i.Name
+            AND b.AuthorId = i.AuthorId
+            AND b.Pages = i.Pages
+            AND b.Price = i.Price
+            AND b.PublishDate = i.PublishDate
+            AND b.ThemeId = i.ThemeId
+        )
+    )
+    BEGIN
+        RAISERROR('Ця книга вже існує в базі даних.', 16, 1);
+    END;
+    ELSE
+    BEGIN
+        INSERT INTO Books (Name, Pages, Price, PublishDate, AuthorId, ThemeId)
+        SELECT Name, Pages, Price, PublishDate, AuthorId, ThemeId
+        FROM inserted;
+    END;
+END;
+
+-- перевірка
+INSERT INTO Books (Name, Pages, Price, PublishDate, AuthorId, ThemeId) VALUES
+('The Shining', 600, 15.99, '2023-05-10', 3, 1);
+
+
+-- визначає продаж в діапазоні дат
+CREATE PROCEDURE BetweenDates
+    @StartDate DATE,
+    @EndDate DATE
+AS
+BEGIN
+    SELECT 
+        Sales.Id AS SaleId,
+        Books.Name AS BookName,
+        Authors.Name AS AuthorName,
+        Sales.Quantity AS Quantity,
+        Shops.Name AS ShopName,
+        Sales.SaleDate AS SaleDate
+    FROM 
+        Sales
+    JOIN 
+        Books ON Sales.BookId = Books.Id
+    JOIN 
+        Authors ON Books.AuthorId = Authors.Id
+    JOIN 
+        Shops ON Sales.ShopId = Shops.Id
+    WHERE 
+        Sales.SaleDate BETWEEN @StartDate AND @EndDate;
+END;
+
+-- визначає продаж в діапазоні дат
+EXEC BetweenDates '2024-03-01', '2024-03-24';
+
+
+-- заробітна плата + 5% від продажи
+CREATE PROCEDURE CalculateSalaryForMonth
+    @Month DATE
+AS
+BEGIN
+    -- Вивід прибутку та заробітної плати для кожного працівника за вказаний місяць
+    SELECT 
+        e.EmployeeId,
+        e.Name AS EmployeeName,
+        @Month AS Month,
+        ISNULL(SUM(s.Price * s.Quantity), 0) AS TotalIncome,
+        ISNULL(SUM(s.Price * s.Quantity), 0) * 0.05 AS Bonus, -- 5% від прибутку
+        e.Salary + (ISNULL(SUM(s.Price * s.Quantity), 0) * 0.05) AS TotalSalary -- Зарплата + бонус
+    FROM 
+        Employees e
+    LEFT JOIN 
+        Sales s ON e.EmployeeId = s.EmployeeId AND MONTH(s.SaleDate) = MONTH(@Month)
+    LEFT JOIN 
+        Orders o ON e.EmployeeId = o.EmployeeId AND MONTH(o.OrderDate) = MONTH(@Month)
+    GROUP BY 
+        e.EmployeeId, e.Name, e.Salary;
+END;
+
+
+EXEC CalculateSalaryForMonth '2024-03-31';
+
