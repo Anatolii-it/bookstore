@@ -74,7 +74,7 @@ CREATE TABLE Books (
     FOREIGN KEY (ThemeId) REFERENCES Themes(Id)
 );
 -- Склад
-CREATE TABLE Warehouse (
+CREATE TABLE Warehouses (
     WarehouseId INT PRIMARY KEY IDENTITY,
 	BookId INT NOT NULL,
     Quantity INT NOT NULL,
@@ -209,22 +209,127 @@ VALUES
 ('Jane', 'Smith', 'janesmith@example.com', '1234567891'),
 ('Michael', 'Johnson', 'michaeljohnson@example.com', '1234567892');
 
+-- тригер вносить на склад кількість книг згидно Orders
+CREATE TRIGGER UpdateWarehouses
+ON Orders
+AFTER INSERT
+AS
+BEGIN
+    MERGE INTO Warehouses AS target
+    USING (
+        SELECT i.BookId, i.ShopId, SUM(i.Quantity) AS TotalQuantity
+        FROM inserted AS i
+        GROUP BY i.BookId, i.ShopId
+    ) AS source ON target.BookId = source.BookId AND target.ShopId = source.ShopId
+    WHEN MATCHED THEN
+        UPDATE SET target.Quantity = target.Quantity + source.TotalQuantity
+    WHEN NOT MATCHED THEN
+        INSERT (BookId, Quantity, ShopId)
+        VALUES (source.BookId, source.TotalQuantity, source.ShopId);
+END;
+
+
 -- закупка книг
 INSERT INTO Orders(PPrice, Quantity, OrderDate, BookId, ShopId, ProviderId, EmployeeId) VALUES
-(10.99, 10, '2024-03-20', 1, 1, 1, 1),
-(10.50, 20, '2024-03-21', 2, 2, 2, 3),
-(10.99, 15, '2024-03-22', 3, 3, 3, 5),
-(20.99, 8, '2024-03-23', 4, 4, 1, 7),
-(5.99, 12, '2024-03-24', 5, 5, 3, 9),
-(4.99, 15, '2024-03-25', 6, 1, 2, 2),
-(12.50, 18, '2024-03-26', 7, 2, 1, 4),
-(8.99, 22, '2024-03-27', 8, 3, 2, 6),
-(7.99, 25, '2024-03-28', 9, 4, 3, 8),
-(3.99, 30, '2024-03-29', 10, 5, 1, 10);
+(10.99, 100, '2024-03-20', 1, 1, 1, 1),
+(10.50, 100, '2024-03-21', 2, 2, 2, 3),
+(10.99, 100, '2024-03-22', 3, 3, 3, 5),
+(20.99, 100, '2024-03-23', 4, 4, 1, 7),
+(5.99, 100, '2024-03-24', 5, 5, 3, 9),
+(4.99, 100, '2024-03-25', 6, 1, 2, 2),
+(12.50, 100, '2024-03-26', 7, 2, 1, 4),
+(8.99, 100, '2024-03-27', 8, 3, 2, 6),
+(7.99, 100, '2024-03-28', 9, 4, 3, 8),
+(3.99, 100, '2024-03-29', 10, 5, 1, 10);
 
--- Внесення даних з таблиці "Orders" на склад
 
-INSERT INTO Warehouse (BookId, Quantity, ShopId)
-SELECT BookId, Quantity, ShopId
-FROM Orders;
+-- тригер віднімає зі складу кількість книг згидно Sales
+CREATE TRIGGER PndateWarehouses
+ON Sales
+AFTER INSERT
+AS
+BEGIN
+    MERGE INTO Warehouses AS target
+    USING (
+        SELECT i.BookId, i.ShopId, SUM(i.Quantity) AS TotalQuantity
+        FROM inserted AS i
+        GROUP BY i.BookId, i.ShopId
+    ) AS source ON target.BookId = source.BookId AND target.ShopId = source.ShopId
+    WHEN MATCHED THEN
+        UPDATE SET target.Quantity = target.Quantity - source.TotalQuantity
+    WHEN NOT MATCHED THEN
+        INSERT (BookId, Quantity, ShopId)
+        VALUES (source.BookId, source.TotalQuantity, source.ShopId);
+END;
 
+-- не дасть провести продаж якщо кількість недостатня
+CREATE TRIGGER PreventInvalidSale
+ON Sales
+INSTEAD OF INSERT
+AS
+BEGIN
+    IF EXISTS (
+        SELECT w.BookId, w.ShopId
+        FROM inserted AS i
+        INNER JOIN Warehouses AS w ON i.BookId = w.BookId AND i.ShopId = w.ShopId
+        WHERE w.Quantity < i.Quantity
+    )
+    BEGIN
+        RAISERROR('Недостатня кількість книг на складі для продажу.', 16, 1);
+        ROLLBACK TRANSACTION;
+    END;
+    ELSE
+    BEGIN
+        INSERT INTO Sales (Price, Quantity, SaleDate, BookId, ShopId, CustomerId, EmployeeId)
+        SELECT Price, Quantity, SaleDate, BookId, ShopId, CustomerId, EmployeeId
+        FROM inserted;
+    END;
+END;
+
+
+INSERT INTO Sales(Price, Quantity, SaleDate, BookId, ShopId, CustomerId, EmployeeId) VALUES
+(10.99, 29, '2024-03-20', 1, 1, 1, 1),
+(3.99, 29, '2024-03-29', 10, 5, 1, 10);
+
+INSERT INTO Sales (Price, Quantity, SaleDate, BookId, ShopId, CustomerId, EmployeeId) VALUES
+(15.99, 10, '2024-03-20', 1, 1, 1, 1),
+(12.50, 20, '2024-03-21', 2, 2, 2, 2),
+(19.99, 15, '2024-03-22', 3, 3, 3, 3),
+(25.99, 8, '2024-03-23', 4, 4, 4, 4),
+(10.99, 12, '2024-03-24', 5, 5, 5, 5),
+(9.99, 15, '2024-03-25', 6, 1, 6, 1),
+(18.50, 18, '2024-03-26', 7, 2, 7, 3),
+(14.99, 22, '2024-03-27', 8, 3, 8, 2),
+(11.99, 25, '2024-03-28', 9, 4, 9, 2),
+(8.99, 30, '2024-03-29', 10, 5, 10, 5);
+
+-- Визначити дохід по кожному магазину
+CREATE PROCEDURE CalculateIncomeByShop
+AS
+BEGIN
+    -- Тимчасова таблиця для об'єднання результатів
+    CREATE TABLE #IncomeByShop (
+        ShopId INT,
+        TotalIncome MONEY
+    );
+
+    -- Розрахунок доходу за продажі для кожного магазину
+    INSERT INTO #IncomeByShop (ShopId, TotalIncome)
+    SELECT s.ShopId, SUM(s.Price * s.Quantity) AS TotalIncome
+    FROM Sales AS s
+    GROUP BY s.ShopId;
+
+    -- Додавання доходу за замовлення для кожного магазину
+    UPDATE #IncomeByShop
+    SET TotalIncome = TotalIncome + (
+        SELECT SUM(o.PPrice * o.Quantity)
+        FROM Orders AS o
+        WHERE o.ShopId = #IncomeByShop.ShopId
+    );
+
+    -- Показати результат
+    SELECT * FROM #IncomeByShop;
+
+    -- Видалення тимчасової таблиці
+    DROP TABLE #IncomeByShop;
+END;
